@@ -197,47 +197,110 @@
       const totalRed = reports.reduce((a, r) => a + Object.values(r.statuses).filter(v => v === "red").length, 0);
 
       const handleSave = () => {
-        const statusLabel = { green: "PASS", yellow: "MONITOR", red: "FIX", none: "NOT CHECKED" };
-        const statusColor = { green: "#16a34a", yellow: "#ca8a04", red: "#dc2626", none: "#94a3b8" };
+        const statusLabel = { green: "PASS", yellow: "MONITOR", red: "FIX", none: "—" };
+        const statusColor = { green: "#16a34a", yellow: "#b45309", red: "#dc2626", none: "#94a3b8" };
+        const statusBg   = { green: "#dcfce7", yellow: "#fef9c3", red: "#fee2e2", none: "#f8fafc" };
+
+        const totalGreenCount = reports.reduce((a,r)=>a+Object.values(r.statuses).filter(v=>v==="green").length,0);
+        const totalYellowCount = reports.reduce((a,r)=>a+Object.values(r.statuses).filter(v=>v==="yellow").length,0);
+        const totalRedCount = reports.reduce((a,r)=>a+Object.values(r.statuses).filter(v=>v==="red").length,0);
+
         const doorsHTML = reports.map(r => {
           const rows = CHECKLIST_ITEMS.map(item => {
             const s = r.statuses[item.id] || "none";
             const note = r.notes[item.id] || "";
-            return `<tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${item.label}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-weight:700;color:${statusColor[s]}">${statusLabel[s]}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;">${note}</td></tr>`;
+            return `<tr>
+              <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;width:38%;">${item.label}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;width:15%;">
+                <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:${statusBg[s]};color:${statusColor[s]}">${statusLabel[s]}</span>
+              </td>
+              <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;font-size:11px;color:#475569;">${note}</td>
+            </tr>`;
           }).join("");
-          return `<div style="margin-bottom:32px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-            <div style="background:#1e293b;color:white;padding:16px 20px;font-size:18px;font-weight:700;">${r.doorName} — ${r.doorType} | ${r.material}${r.openerBrand ? " | " + r.openerBrand : ""}${r.age ? " | Age: " + r.age + " yrs" : ""}</div>
-            <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:14px;">
-              <thead><tr style="background:#f8fafc;"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;">ITEM</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;">STATUS</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;">NOTES</th></tr></thead>
+
+          const dProps = [
+            r.doorType, r.material,
+            r.openerBrand ? "Opener: "+r.openerBrand : null,
+            r.age ? "Age: "+r.age+" yrs" : null
+          ].filter(Boolean).join(" &nbsp;|&nbsp; ");
+
+          return `<div style="margin-bottom:14px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;page-break-inside:avoid;">
+            <div style="background:#1e293b;color:white;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:13px;font-weight:700;">${r.doorName}</span>
+              <span style="font-size:11px;color:#94a3b8;">${dProps}</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-family:sans-serif;">
+              <thead><tr style="background:#f8fafc;">
+                <th style="padding:5px 8px;text-align:left;font-size:10px;color:#64748b;font-weight:700;letter-spacing:.06em;width:38%;">INSPECTION ITEM</th>
+                <th style="padding:5px 8px;text-align:left;font-size:10px;color:#64748b;font-weight:700;letter-spacing:.06em;width:15%;">STATUS</th>
+                <th style="padding:5px 8px;text-align:left;font-size:10px;color:#64748b;font-weight:700;letter-spacing:.06em;">NOTES</th>
+              </tr></thead>
               <tbody>${rows}</tbody>
             </table>
-            ${r.overallNotes ? `<div style="padding:12px 20px;background:#f8fafc;font-size:13px;color:#475569;"><strong>Recommendations:</strong> ${r.overallNotes}</div>` : ""}
+            ${r.overallNotes ? `<div style="padding:6px 14px;background:#fffbeb;font-size:11px;color:#92400e;border-top:1px solid #fde68a;"><strong>Recommendations:</strong> ${r.overallNotes}</div>` : ""}
           </div>`;
         }).join("");
 
         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Inspection Report</title>
-          <style>body{font-family:sans-serif;padding:32px;max-width:860px;margin:0 auto;}@media print{button{display:none;}}</style>
-          </head><body>
-          <div style="background:#0f172a;color:white;padding:28px 32px;border-radius:12px;margin-bottom:24px;">
-            <div style="font-size:24px;font-weight:800;">YOUR COMPANY NAME</div>
-            <div style="color:#f59e0b;font-size:12px;letter-spacing:.12em;margin-bottom:12px;">GARAGE DOOR SERVICES</div>
-            <div style="color:#94a3b8;font-size:13px;line-height:1.8;">
-              <div>Address: 19 Grove St, Berkley, MA</div>
-              <div>Phone: 508-821-7878</div>
-              <div>Email: Mysuperiordoor@comcast.net</div>
+          <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: Arial, sans-serif; font-size: 13px; color: #1e293b; background: white; }
+            .page { max-width: 780px; margin: 0 auto; padding: 24px; }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none !important; }
+              .page { padding: 12px; max-width: 100%; }
+              @page { margin: 0.5in; size: letter; }
+            }
+          </style>
+        </head><body><div class="page">
+
+          <!-- Header -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:12px;border-bottom:3px solid #0f172a;margin-bottom:12px;">
+            <div>
+              <div style="font-size:20px;font-weight:800;letter-spacing:.02em;color:#0f172a;">YOUR COMPANY NAME</div>
+              <div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#f59e0b;margin:2px 0 6px;">GARAGE DOOR SERVICES</div>
+              <div style="font-size:11px;color:#475569;line-height:1.7;">
+                <div>Address: 19 Grove St, Berkley, MA</div>
+                <div>Phone: 508-821-7878</div>
+                <div>Email: Mysuperiordoor@comcast.net</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:.04em;">INSPECTION REPORT</div>
+              <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.8;">
+                <div><strong>Technician:</strong> ${tech}</div>
+                <div><strong>Date:</strong> ${date}</div>
+                <div><strong>Customer:</strong> ${customer || "—"}</div>
+                <div><strong>Address:</strong> ${address || "—"}</div>
+              </div>
             </div>
           </div>
-          <div style="border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin-bottom:24px;font-size:14px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;">
-              <div><div style="font-size:11px;color:#64748b;font-weight:700;">TECHNICIAN</div><div style="margin-top:4px;font-weight:600;">${tech}</div></div>
-              <div><div style="font-size:11px;color:#64748b;font-weight:700;">DATE</div><div style="margin-top:4px;font-weight:600;">${date}</div></div>
-              <div><div style="font-size:11px;color:#64748b;font-weight:700;">CUSTOMER</div><div style="margin-top:4px;font-weight:600;">${customer || "—"}</div></div>
-              <div><div style="font-size:11px;color:#64748b;font-weight:700;">ADDRESS</div><div style="margin-top:4px;font-weight:600;">${address || "—"}</div></div>
-            </div>
+
+          <!-- Summary Bar -->
+          <div style="display:flex;gap:8px;margin-bottom:14px;padding:8px 12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;align-items:center;">
+            <span style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.08em;margin-right:4px;">SUMMARY</span>
+            <span style="padding:3px 12px;border-radius:4px;font-size:12px;font-weight:700;background:#dcfce7;color:#16a34a;">✓ ${totalGreenCount} Pass</span>
+            <span style="padding:3px 12px;border-radius:4px;font-size:12px;font-weight:700;background:#fef9c3;color:#b45309;">⚠ ${totalYellowCount} Monitor</span>
+            <span style="padding:3px 12px;border-radius:4px;font-size:12px;font-weight:700;background:#fee2e2;color:#dc2626;">✕ ${totalRedCount} Fix</span>
+            <span style="margin-left:auto;font-size:11px;color:#64748b;">${reports.length} door${reports.length !== 1 ? "s" : ""} inspected</span>
           </div>
+
+          <!-- Door Reports -->
           ${doorsHTML}
-          <button onclick="window.print()" style="padding:14px 32px;background:#0f172a;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">Print / Save as PDF</button>
-        </body></html>`;
+
+          <!-- Signature Line -->
+          <div style="margin-top:16px;display:flex;gap:40px;padding-top:12px;border-top:1px solid #e2e8f0;">
+            <div style="flex:1;"><div style="border-bottom:1px solid #1e293b;margin-bottom:4px;height:24px;"></div><div style="font-size:10px;color:#64748b;">TECHNICIAN SIGNATURE</div></div>
+            <div style="flex:1;"><div style="border-bottom:1px solid #1e293b;margin-bottom:4px;height:24px;"></div><div style="font-size:10px;color:#64748b;">CUSTOMER SIGNATURE</div></div>
+            <div style="width:120px;"><div style="border-bottom:1px solid #1e293b;margin-bottom:4px;height:24px;"></div><div style="font-size:10px;color:#64748b;">DATE</div></div>
+          </div>
+
+          <div class="no-print" style="margin-top:20px;text-align:center;">
+            <button onclick="window.print()" style="padding:12px 36px;background:#0f172a;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">🖨 Print / Save as PDF</button>
+          </div>
+
+        </div></body></html>`;
 
         const blob = new Blob([html], { type: "text/html" });
         const url = URL.createObjectURL(blob);
