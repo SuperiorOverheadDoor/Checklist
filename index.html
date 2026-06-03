@@ -1,0 +1,590 @@
+import { useState } from "react";
+
+const TECHNICIANS = ["Select Technician", "Ken", "Shane", "Jake", "Craig"];
+
+const CHECKLIST_ITEMS = [
+  { id: "springs", label: "Torsion / Extension Springs", category: "Mechanical" },
+  { id: "cables", label: "Lift Cables", category: "Mechanical" },
+  { id: "rollers", label: "Rollers & Hinges", category: "Mechanical" },
+  { id: "tracks", label: "Tracks & Alignment", category: "Mechanical" },
+  { id: "opener_motor", label: "Opener Motor", category: "Opener" },
+  { id: "opener_drive", label: "Drive System (Belt/Chain/Screw)", category: "Opener" },
+  { id: "safety_reverse", label: "Auto-Reverse Safety Test", category: "Safety" },
+  { id: "photo_eyes", label: "Photo Eye Sensors", category: "Safety" },
+  { id: "weatherstrip", label: "Weatherstripping & Seals", category: "Exterior" },
+  { id: "panels", label: "Door Panels & Condition", category: "Exterior" },
+  { id: "balance", label: "Door Balance Test", category: "Performance" },
+  { id: "lubrication", label: "Lubrication & Noise", category: "Performance" },
+];
+
+const STATUS = {
+  green: { label: "Pass", bg: "#16a34a", light: "#dcfce7", border: "#86efac", text: "#15803d", icon: "✓" },
+  yellow: { label: "Monitor", bg: "#ca8a04", light: "#fef9c3", border: "#fde047", text: "#a16207", icon: "⚠" },
+  red: { label: "Fix", bg: "#dc2626", light: "#fee2e2", border: "#fca5a5", text: "#b91c1c", icon: "✕" },
+  none: { label: "Not Checked", bg: "#e2e8f0", light: "#f8fafc", border: "#cbd5e1", text: "#64748b", icon: "–" },
+};
+
+function StatusButton({ value, current, onChange }) {
+  const s = STATUS[value];
+  const active = current === value;
+  return (
+    <button
+      onClick={() => onChange(value)}
+      style={{
+        padding: "5px 12px",
+        borderRadius: "6px",
+        border: `2px solid ${active ? s.bg : "#e2e8f0"}`,
+        background: active ? s.bg : "#f8fafc",
+        color: active ? "white" : "#94a3b8",
+        fontWeight: active ? "700" : "500",
+        fontSize: "12px",
+        cursor: "pointer",
+        transition: "all 0.15s",
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
+        fontFamily: "inherit",
+        letterSpacing: "0.02em",
+      }}
+    >
+      <span>{s.icon}</span> {s.label}
+    </button>
+  );
+}
+
+function DoorReport({ report, index, onUpdate, onRemove, totalReports }) {
+  const grouped = CHECKLIST_ITEMS.reduce((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {});
+
+  const updateStatus = (id, status) => {
+    onUpdate({ ...report, statuses: { ...report.statuses, [id]: status } });
+  };
+
+  const updateNote = (id, note) => {
+    onUpdate({ ...report, notes: { ...report.notes, [id]: note } });
+  };
+
+  const getScore = () => {
+    const vals = Object.values(report.statuses);
+    const green = vals.filter(v => v === "green").length;
+    const yellow = vals.filter(v => v === "yellow").length;
+    const red = vals.filter(v => v === "red").length;
+    const total = CHECKLIST_ITEMS.length;
+    return { green, yellow, red, total, checked: vals.length };
+  };
+
+  const score = getScore();
+
+  const getGrade = () => {
+    if (score.red > 0) return { letter: "NEEDS REPAIR", color: "#dc2626", bg: "#fee2e2" };
+    if (score.yellow >= 3) return { letter: "FAIR", color: "#ca8a04", bg: "#fef9c3" };
+    if (score.yellow > 0) return { letter: "GOOD", color: "#ca8a04", bg: "#fef9c3" };
+    if (score.checked === score.total) return { letter: "EXCELLENT", color: "#16a34a", bg: "#dcfce7" };
+    return { letter: "IN PROGRESS", color: "#6366f1", bg: "#eef2ff" };
+  };
+
+  const grade = getGrade();
+
+  return (
+    <div style={{
+      background: "white",
+      borderRadius: "16px",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+      overflow: "hidden",
+      marginBottom: "32px",
+      border: "1px solid #f1f5f9",
+    }}>
+      {/* Door Header */}
+      <div style={{
+        background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
+        padding: "20px 28px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "12px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{
+            width: "44px", height: "44px",
+            background: "rgba(255,255,255,0.12)",
+            borderRadius: "12px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "22px",
+          }}>🚪</div>
+          <div>
+            <input
+              value={report.doorName}
+              onChange={e => onUpdate({ ...report, doorName: e.target.value })}
+              placeholder="Door Name / Location"
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "white",
+                fontSize: "18px",
+                fontWeight: "700",
+                fontFamily: "inherit",
+                outline: "none",
+                width: "220px",
+                letterSpacing: "0.01em",
+              }}
+            />
+            <div style={{ color: "#94a3b8", fontSize: "12px", marginTop: "2px" }}>
+              Door #{index + 1} of {totalReports}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{
+            padding: "8px 18px",
+            borderRadius: "10px",
+            background: grade.bg,
+            color: grade.color,
+            fontWeight: "800",
+            fontSize: "13px",
+            letterSpacing: "0.06em",
+          }}>
+            {grade.letter}
+          </div>
+          <div style={{ display: "flex", gap: "6px", fontSize: "12px" }}>
+            <span style={{ background: "#dcfce7", color: "#16a34a", padding: "4px 8px", borderRadius: "6px", fontWeight: "700" }}>{score.green} ✓</span>
+            <span style={{ background: "#fef9c3", color: "#ca8a04", padding: "4px 8px", borderRadius: "6px", fontWeight: "700" }}>{score.yellow} ⚠</span>
+            <span style={{ background: "#fee2e2", color: "#dc2626", padding: "4px 8px", borderRadius: "6px", fontWeight: "700" }}>{score.red} ✕</span>
+          </div>
+          {totalReports > 1 && (
+            <button onClick={onRemove} style={{
+              background: "rgba(255,255,255,0.1)",
+              border: "none",
+              color: "#94a3b8",
+              borderRadius: "8px",
+              width: "32px", height: "32px",
+              cursor: "pointer",
+              fontSize: "16px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>×</button>
+          )}
+        </div>
+      </div>
+
+      {/* Door Details Row */}
+      <div style={{
+        background: "#f8fafc",
+        padding: "14px 28px",
+        borderBottom: "1px solid #e2e8f0",
+        display: "flex",
+        gap: "20px",
+        flexWrap: "wrap",
+        alignItems: "center",
+      }}>
+        <div>
+          <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>Door Type</label>
+          <select value={report.doorType} onChange={e => onUpdate({ ...report, doorType: e.target.value })}
+            style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", background: "white", color: "#1e293b" }}>
+            <option>Residential</option>
+            <option>Commercial</option>
+            <option>Industrial</option>
+            <option>Fire-Rated</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>Material</label>
+          <select value={report.material} onChange={e => onUpdate({ ...report, material: e.target.value })}
+            style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", background: "white", color: "#1e293b" }}>
+            <option>Steel</option>
+            <option>Aluminum</option>
+            <option>Wood</option>
+            <option>Fiberglass</option>
+            <option>Vinyl</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>Opener Brand</label>
+          <input value={report.openerBrand} onChange={e => onUpdate({ ...report, openerBrand: e.target.value })}
+            placeholder="e.g. LiftMaster"
+            style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", width: "130px", color: "#1e293b" }} />
+        </div>
+        <div>
+          <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>Age (Years)</label>
+          <input value={report.age} onChange={e => onUpdate({ ...report, age: e.target.value })}
+            placeholder="e.g. 5"
+            style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", width: "80px", color: "#1e293b" }} />
+        </div>
+      </div>
+
+      {/* Checklist */}
+      <div style={{ padding: "24px 28px" }}>
+        {Object.entries(grouped).map(([cat, items]) => (
+          <div key={cat} style={{ marginBottom: "24px" }}>
+            <div style={{
+              fontSize: "11px", fontWeight: "800", color: "#94a3b8",
+              letterSpacing: "0.1em", textTransform: "uppercase",
+              marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px",
+            }}>
+              <div style={{ height: "1px", width: "16px", background: "#e2e8f0" }} />
+              {cat}
+              <div style={{ flex: 1, height: "1px", background: "#e2e8f0" }} />
+            </div>
+            {items.map(item => {
+              const status = report.statuses[item.id] || "none";
+              const s = STATUS[status];
+              return (
+                <div key={item.id} style={{
+                  display: "flex", alignItems: "flex-start", gap: "14px",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  background: status !== "none" ? s.light : "transparent",
+                  border: `1px solid ${status !== "none" ? s.border : "transparent"}`,
+                  marginBottom: "6px",
+                  transition: "all 0.2s",
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: "600", color: "#1e293b", fontSize: "14px", marginBottom: "6px" }}>{item.label}</div>
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                      {["green", "yellow", "red"].map(v => (
+                        <StatusButton key={v} value={v} current={status} onChange={val => updateStatus(item.id, val)} />
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ minWidth: "200px" }}>
+                    <input
+                      value={report.notes[item.id] || ""}
+                      onChange={e => updateNote(item.id, e.target.value)}
+                      placeholder="Add note..."
+                      style={{
+                        width: "100%", padding: "7px 10px",
+                        borderRadius: "8px", border: "1px solid #e2e8f0",
+                        fontFamily: "inherit", fontSize: "12px",
+                        color: "#475569", background: "white", outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* Overall Notes */}
+        <div style={{ marginTop: "8px" }}>
+          <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Overall Recommendations
+          </label>
+          <textarea
+            value={report.overallNotes}
+            onChange={e => onUpdate({ ...report, overallNotes: e.target.value })}
+            placeholder="Enter any overall recommendations or notes for this door..."
+            rows={3}
+            style={{
+              display: "block", width: "100%", marginTop: "8px",
+              padding: "10px 14px", borderRadius: "10px",
+              border: "1px solid #e2e8f0", fontFamily: "inherit",
+              fontSize: "13px", color: "#475569", resize: "vertical",
+              boxSizing: "border-box", lineHeight: "1.5",
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const newReport = (n) => ({
+  id: Date.now() + n,
+  doorName: `Door ${n + 1}`,
+  doorType: "Residential",
+  material: "Steel",
+  openerBrand: "",
+  age: "",
+  statuses: {},
+  notes: {},
+  overallNotes: "",
+});
+
+export default function GarageDoorChecklist() {
+  const today = new Date().toISOString().split("T")[0];
+  const [tech, setTech] = useState("Select Technician");
+  const [date, setDate] = useState(today);
+  const [customer, setCustomer] = useState("");
+  const [address, setAddress] = useState("");
+  const [reports, setReports] = useState([newReport(0)]);
+
+  const addDoor = () => setReports(r => [...r, newReport(r.length)]);
+  const updateReport = (id, updated) => setReports(r => r.map(x => x.id === id ? updated : x));
+  const removeReport = (id) => setReports(r => r.filter(x => x.id !== id));
+
+  const totalGreen = reports.reduce((a, r) => a + Object.values(r.statuses).filter(v => v === "green").length, 0);
+  const totalYellow = reports.reduce((a, r) => a + Object.values(r.statuses).filter(v => v === "yellow").length, 0);
+  const totalRed = reports.reduce((a, r) => a + Object.values(r.statuses).filter(v => v === "red").length, 0);
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(160deg, #f0f4f8 0%, #e8edf5 100%)",
+      fontFamily: "'Georgia', 'Times New Roman', serif",
+      padding: "32px 16px",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&display=swap');
+        * { box-sizing: border-box; }
+        input, select, textarea { font-family: 'Source Sans 3', sans-serif !important; }
+        body { margin: 0; }
+        @media print {
+          body { background: white; }
+          button { display: none !important; }
+        }
+      `}</style>
+
+      <div style={{ maxWidth: "860px", margin: "0 auto" }}>
+
+        {/* Company Header */}
+        <div style={{
+          background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #0f172a 100%)",
+          borderRadius: "20px",
+          padding: "32px 40px",
+          marginBottom: "24px",
+          position: "relative",
+          overflow: "hidden",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+        }}>
+          {/* Decorative garage door stripes */}
+          <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "240px", opacity: 0.04 }}>
+            {[...Array(8)].map((_, i) => (
+              <div key={i} style={{ height: "12.5%", borderBottom: "2px solid white" }} />
+            ))}
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "20px", position: "relative" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "16px" }}>
+                <div style={{
+                  width: "56px", height: "56px",
+                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  borderRadius: "14px",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "28px",
+                  boxShadow: "0 4px 16px rgba(245,158,11,0.4)",
+                }}>🏠</div>
+                <div>
+                  <div style={{
+                    fontFamily: "'Oswald', sans-serif",
+                    fontSize: "26px", fontWeight: "700",
+                    color: "white", letterSpacing: "0.04em",
+                    lineHeight: 1,
+                  }}>
+                    YOUR COMPANY NAME
+                  </div>
+                  <div style={{ color: "#f59e0b", fontSize: "12px", fontWeight: "600", letterSpacing: "0.14em", marginTop: "4px", fontFamily: "'Source Sans 3', sans-serif" }}>
+                    GARAGE DOOR SERVICES
+                  </div>
+                </div>
+              </div>
+              <div style={{ color: "#94a3b8", fontSize: "13px", lineHeight: "1.6", fontFamily: "'Source Sans 3', sans-serif" }}>
+                <div>Address: 19 Grove St, Berkley, MA</div>
+                <div>Phone: 508-821-7878</div>
+                <div>Email: Mysuperiordoor@comcast.net</div>
+              </div>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <div style={{
+                fontFamily: "'Oswald', sans-serif",
+                fontSize: "28px", fontWeight: "700",
+                color: "white", letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}>
+                Inspection Report
+              </div>
+              <div style={{
+                display: "inline-block",
+                marginTop: "6px",
+                padding: "4px 14px",
+                background: "#f59e0b",
+                borderRadius: "6px",
+                color: "#0f172a",
+                fontWeight: "700",
+                fontSize: "12px",
+                letterSpacing: "0.1em",
+                fontFamily: "'Source Sans 3', sans-serif",
+              }}>
+                GARAGE DOOR ASSESSMENT
+              </div>
+              <div style={{ marginTop: "16px", display: "flex", gap: "12px", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <div style={{ background: "#22c55e", padding: "6px 14px", borderRadius: "8px", color: "white", fontWeight: "700", fontSize: "12px", fontFamily: "'Source Sans 3', sans-serif" }}>● PASS</div>
+                <div style={{ background: "#eab308", padding: "6px 14px", borderRadius: "8px", color: "white", fontWeight: "700", fontSize: "12px", fontFamily: "'Source Sans 3', sans-serif" }}>● MONITOR</div>
+                <div style={{ background: "#ef4444", padding: "6px 14px", borderRadius: "8px", color: "white", fontWeight: "700", fontSize: "12px", fontFamily: "'Source Sans 3', sans-serif" }}>● FIX</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Job Info Card */}
+        <div style={{
+          background: "white",
+          borderRadius: "16px",
+          padding: "24px 28px",
+          marginBottom: "24px",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+          border: "1px solid #f1f5f9",
+        }}>
+          <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: "14px", letterSpacing: "0.1em", color: "#64748b", marginBottom: "16px" }}>JOB INFORMATION</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px" }}>
+            {[
+              { label: "Technician", content: (
+                <select value={tech} onChange={e => setTech(e.target.value)} style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "'Source Sans 3', sans-serif", fontSize: "14px", color: "#1e293b", background: "white" }}>
+                  {TECHNICIANS.map(t => <option key={t}>{t}</option>)}
+                </select>
+              )},
+              { label: "Inspection Date", content: (
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "'Source Sans 3', sans-serif", fontSize: "14px", color: "#1e293b" }} />
+              )},
+              { label: "Customer Name", content: (
+                <input value={customer} onChange={e => setCustomer(e.target.value)} placeholder="Customer name" style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "'Source Sans 3', sans-serif", fontSize: "14px", color: "#1e293b" }} />
+              )},
+              { label: "Service Address", content: (
+                <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Job address" style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "'Source Sans 3', sans-serif", fontSize: "14px", color: "#1e293b" }} />
+              )},
+            ].map(({ label, content }) => (
+              <div key={label}>
+                <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "6px", fontFamily: "'Source Sans 3', sans-serif" }}>{label}</div>
+                {content}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Summary Bar */}
+        {(totalGreen + totalYellow + totalRed) > 0 && (
+          <div style={{
+            background: "white",
+            borderRadius: "12px",
+            padding: "16px 24px",
+            marginBottom: "24px",
+            display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+            border: "1px solid #f1f5f9",
+          }}>
+            <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: "13px", letterSpacing: "0.08em", color: "#64748b", marginRight: "4px" }}>OVERALL SUMMARY</div>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <span style={{ background: "#dcfce7", color: "#16a34a", padding: "6px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "14px", fontFamily: "'Source Sans 3', sans-serif" }}>✓ {totalGreen} Pass</span>
+              <span style={{ background: "#fef9c3", color: "#ca8a04", padding: "6px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "14px", fontFamily: "'Source Sans 3', sans-serif" }}>⚠ {totalYellow} Monitor</span>
+              <span style={{ background: "#fee2e2", color: "#dc2626", padding: "6px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "14px", fontFamily: "'Source Sans 3', sans-serif" }}>✕ {totalRed} Fix</span>
+            </div>
+            <div style={{ marginLeft: "auto", fontSize: "13px", color: "#64748b", fontFamily: "'Source Sans 3', sans-serif" }}>
+              {reports.length} door{reports.length !== 1 ? "s" : ""} inspected
+            </div>
+          </div>
+        )}
+
+        {/* Door Reports */}
+        {reports.map((r, i) => (
+          <DoorReport
+            key={r.id}
+            report={r}
+            index={i}
+            onUpdate={updated => updateReport(r.id, updated)}
+            onRemove={() => removeReport(r.id)}
+            totalReports={reports.length}
+          />
+        ))}
+
+        {/* Add Door Button */}
+        <button onClick={addDoor} style={{
+          width: "100%",
+          padding: "18px",
+          borderRadius: "14px",
+          border: "2px dashed #cbd5e1",
+          background: "white",
+          color: "#64748b",
+          fontSize: "15px",
+          fontWeight: "600",
+          cursor: "pointer",
+          fontFamily: "'Oswald', sans-serif",
+          letterSpacing: "0.06em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "10px",
+          transition: "all 0.2s",
+          marginBottom: "24px",
+        }}
+          onMouseEnter={e => { e.target.style.borderColor = "#f59e0b"; e.target.style.color = "#d97706"; }}
+          onMouseLeave={e => { e.target.style.borderColor = "#cbd5e1"; e.target.style.color = "#64748b"; }}
+        >
+          <span style={{ fontSize: "20px" }}>+</span> ADD ANOTHER DOOR
+        </button>
+
+        {/* Print Button */}
+        <button onClick={() => {
+          const statusLabel = { green: "PASS", yellow: "MONITOR", red: "FIX", none: "NOT CHECKED" };
+          const statusColor = { green: "#16a34a", yellow: "#ca8a04", red: "#dc2626", none: "#94a3b8" };
+          const doorsHTML = reports.map((r) => {
+            const rows = CHECKLIST_ITEMS.map(item => {
+              const s = r.statuses[item.id] || "none";
+              const note = r.notes[item.id] || "";
+              return `<tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${item.label}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-weight:700;color:${statusColor[s]}">${statusLabel[s]}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;">${note}</td></tr>`;
+            }).join("");
+            return `<div style="margin-bottom:32px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+              <div style="background:#1e293b;color:white;padding:16px 20px;font-size:18px;font-weight:700;">${r.doorName} &mdash; ${r.doorType} | ${r.material}${r.openerBrand ? " | " + r.openerBrand : ""}${r.age ? " | Age: " + r.age + " yrs" : ""}</div>
+              <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:14px;">
+                <thead><tr style="background:#f8fafc;"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;letter-spacing:.08em;">ITEM</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;letter-spacing:.08em;">STATUS</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:11px;letter-spacing:.08em;">NOTES</th></tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+              ${r.overallNotes ? `<div style="padding:12px 20px;background:#f8fafc;font-size:13px;color:#475569;"><strong>Recommendations:</strong> ${r.overallNotes}</div>` : ""}
+            </div>`;
+          }).join("");
+
+          const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Inspection Report</title><style>body{font-family:sans-serif;padding:32px;max-width:860px;margin:0 auto;}@media print{body{padding:0;}button{display:none;}}</style></head><body>
+            <div style="background:#0f172a;color:white;padding:28px 32px;border-radius:12px;margin-bottom:24px;">
+              <div style="font-size:24px;font-weight:800;letter-spacing:.04em;">YOUR COMPANY NAME</div>
+              <div style="color:#f59e0b;font-size:12px;letter-spacing:.12em;margin-bottom:12px;">GARAGE DOOR SERVICES</div>
+              <div style="color:#94a3b8;font-size:13px;line-height:1.8;">
+                <div>Address: 19 Grove St, Berkley, MA</div>
+                <div>Phone: 508-821-7878</div>
+                <div>Email: Mysuperiordoor@comcast.net</div>
+              </div>
+            </div>
+            <div style="border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin-bottom:24px;font-size:14px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;">
+                <div><div style="font-size:11px;color:#64748b;font-weight:700;letter-spacing:.08em;">TECHNICIAN</div><div style="margin-top:4px;font-weight:600;">${tech}</div></div>
+                <div><div style="font-size:11px;color:#64748b;font-weight:700;letter-spacing:.08em;">DATE</div><div style="margin-top:4px;font-weight:600;">${date}</div></div>
+                <div><div style="font-size:11px;color:#64748b;font-weight:700;letter-spacing:.08em;">CUSTOMER</div><div style="margin-top:4px;font-weight:600;">${customer || "—"}</div></div>
+                <div><div style="font-size:11px;color:#64748b;font-weight:700;letter-spacing:.08em;">ADDRESS</div><div style="margin-top:4px;font-weight:600;">${address || "—"}</div></div>
+              </div>
+            </div>
+            ${doorsHTML}
+            <button onclick="window.print()" style="padding:14px 32px;background:#0f172a;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">Print / Save as PDF</button>
+          </body></html>`;
+
+          const blob = new Blob([html], { type: "text/html" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `inspection-report-${date || "report"}.html`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }} style={{
+          width: "100%",
+          padding: "16px",
+          borderRadius: "14px",
+          border: "none",
+          background: "linear-gradient(135deg, #0f172a, #1e3a5f)",
+          color: "white",
+          fontSize: "15px",
+          fontWeight: "700",
+          cursor: "pointer",
+          fontFamily: "'Oswald', sans-serif",
+          letterSpacing: "0.08em",
+          marginBottom: "40px",
+          boxShadow: "0 4px 20px rgba(15,23,42,0.25)",
+        }}>
+          🖨 PRINT / SAVE REPORT
+        </button>
+
+      </div>
+    </div>
+  );
+}
