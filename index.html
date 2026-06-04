@@ -128,18 +128,32 @@
           </div>
 
           {/* Door Details */}
-          <div style={{ background: "#f8fafc", padding: "14px 28px", borderBottom: "1px solid #e2e8f0", display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "center" }}>
-            {[
-              { label: "Door Type", content: <select value={report.doorType} onChange={e => onUpdate({ ...report, doorType: e.target.value })} style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", background: "white", color: "#1e293b" }}><option>Residential</option><option>Commercial</option><option>Industrial</option><option>Fire-Rated</option></select> },
-              { label: "Material", content: <select value={report.material} onChange={e => onUpdate({ ...report, material: e.target.value })} style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", background: "white", color: "#1e293b" }}><option>Steel</option><option>Aluminum</option><option>Wood</option><option>Fiberglass</option><option>Vinyl</option></select> },
-              { label: "Opener Brand", content: <input value={report.openerBrand} onChange={e => onUpdate({ ...report, openerBrand: e.target.value })} placeholder="e.g. LiftMaster" style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", width: "130px", color: "#1e293b" }} /> },
-              { label: "Age (Years)", content: <input value={report.age} onChange={e => onUpdate({ ...report, age: e.target.value })} placeholder="e.g. 5" style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", width: "80px", color: "#1e293b" }} /> },
-            ].map(({ label, content }) => (
-              <div key={label}>
-                <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</label>
-                {content}
-              </div>
-            ))}
+          <div style={{ background: "#f8fafc", padding: "14px 28px", borderBottom: "1px solid #e2e8f0" }}>
+            {/* Row 1: Door Type, Material, Manufacturer */}
+            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "12px" }}>
+              {[
+                { label: "Door Type", content: <select value={report.doorType} onChange={e => onUpdate({ ...report, doorType: e.target.value })} style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", background: "white", color: "#1e293b" }}><option>Residential</option><option>Commercial</option><option>Industrial</option><option>Fire-Rated</option></select> },
+                { label: "Material", content: <select value={report.material} onChange={e => onUpdate({ ...report, material: e.target.value })} style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", background: "white", color: "#1e293b" }}><option>Steel</option><option>Aluminum</option><option>Wood</option><option>Fiberglass</option><option>Vinyl</option></select> },
+                { label: "Manufacturer", content: <input value={report.manufacturer || ""} onChange={e => onUpdate({ ...report, manufacturer: e.target.value })} placeholder="e.g. Clopay" style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", width: "140px", color: "#1e293b" }} /> },
+              ].map(({ label, content }) => (
+                <div key={label}>
+                  <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</label>
+                  {content}
+                </div>
+              ))}
+            </div>
+            {/* Row 2: Opener Brand, Manufacture Date */}
+            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "flex-end" }}>
+              {[
+                { label: "Opener Brand", content: <input value={report.openerBrand} onChange={e => onUpdate({ ...report, openerBrand: e.target.value })} placeholder="e.g. LiftMaster" style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", width: "150px", color: "#1e293b" }} /> },
+                { label: "Manufacture Date", content: <input value={report.age} onChange={e => onUpdate({ ...report, age: e.target.value })} placeholder="e.g. 06/2018" style={{ display: "block", marginTop: "4px", padding: "6px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "13px", width: "130px", color: "#1e293b" }} /> },
+              ].map(({ label, content }) => (
+                <div key={label}>
+                  <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</label>
+                  {content}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Checklist */}
