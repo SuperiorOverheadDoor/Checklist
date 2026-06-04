@@ -76,6 +76,8 @@
 
       const updateStatus = (id, status) => onUpdate({ ...report, statuses: { ...report.statuses, [id]: status } });
       const updateNote = (id, note) => onUpdate({ ...report, notes: { ...report.notes, [id]: note } });
+      const updatePhoto = (id, dataUrl, fileName) => onUpdate({ ...report, photos: { ...report.photos, [id]: { dataUrl, fileName } } });
+      const removePhoto = (id) => { const p = { ...report.photos }; delete p[id]; onUpdate({ ...report, photos: p }); };
 
       const getScore = () => {
         const vals = Object.values(report.statuses);
@@ -151,20 +153,40 @@
                   const status = report.statuses[item.id] || "none";
                   const s = STATUS[status];
                   return (
-                    <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: "14px", padding: "10px 14px", borderRadius: "10px", background: status !== "none" ? s.light : "transparent", border: `1px solid ${status !== "none" ? s.border : "transparent"}`, marginBottom: "6px", transition: "all 0.2s" }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: "600", color: "#1e293b", fontSize: "14px", marginBottom: "6px" }}>{item.label}</div>
+                    <div key={item.id} style={{ padding: "10px 14px", borderRadius: "10px", background: status !== "none" ? s.light : "transparent", border: `1px solid ${status !== "none" ? s.border : "transparent"}`, marginBottom: "6px", transition: "all 0.2s" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                        <div style={{ fontWeight: "600", color: "#1e293b", fontSize: "14px" }}>{item.label}</div>
                         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                           {["green", "yellow", "red"].map(v => <StatusButton key={v} value={v} current={status} onChange={val => updateStatus(item.id, val)} />)}
                         </div>
                       </div>
-                      <div style={{ minWidth: "200px" }}>
-                        <textarea value={report.notes[item.id] || ""} onChange={e => updateNote(item.id, e.target.value)} placeholder="Add note..." rows={4}
-                          style={{ width: "100%", padding: "7px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "12px", color: "#475569", background: "white", outline: "none", boxSizing: "border-box", resize: "vertical", lineHeight: "1.5" }} />
-                      </div>
+                      <textarea value={report.notes[item.id] || ""} onChange={e => updateNote(item.id, e.target.value)} placeholder="Add note..." rows={4}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontFamily: "inherit", fontSize: "12px", color: "#475569", background: "white", outline: "none", boxSizing: "border-box", resize: "vertical", lineHeight: "1.5" }} />
                     </div>
                   );
                 })}
+
+                {/* Photo button at bottom right of category */}
+                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
+                  {items.map(item => report.photos[item.id] && (
+                    <div key={item.id} style={{ position: "relative", display: "inline-block" }}>
+                      <img src={report.photos[item.id].dataUrl} alt="evidence" style={{ width: "52px", height: "52px", objectFit: "cover", borderRadius: "6px", border: "2px solid #e2e8f0", display: "block" }} title={report.photos[item.id].fileName} />
+                      <div style={{ fontSize: "9px", color: "#64748b", textAlign: "center", marginTop: "2px", maxWidth: "52px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{items.find(i => i.id === item.id)?.label}</div>
+                      <button onClick={() => removePhoto(item.id)} style={{ position: "absolute", top: "-6px", right: "-6px", width: "16px", height: "16px", borderRadius: "50%", background: "#dc2626", border: "none", color: "white", fontSize: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>×</button>
+                    </div>
+                  ))}
+                  <label style={{ display: "flex", alignItems: "center", gap: "5px", cursor: "pointer", padding: "6px 14px", borderRadius: "8px", border: "1px dashed #cbd5e1", background: "#f8fafc", fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    Add Photo for {cat}
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => updatePhoto(cat + "_" + Date.now(), ev.target.result, file.name);
+                      reader.readAsDataURL(file);
+                    }} />
+                  </label>
+                </div>
               </div>
             ))}
             <div style={{ marginTop: "8px" }}>
@@ -179,7 +201,7 @@
 
     const newReport = (n) => ({
       id: Date.now() + n, doorName: `Door ${n + 1}`, doorType: "Residential",
-      material: "Steel", openerBrand: "", age: "", statuses: {}, notes: {}, overallNotes: "",
+      material: "Steel", openerBrand: "", age: "", statuses: {}, notes: {}, photos: {}, overallNotes: "",
     });
 
     function App() {
@@ -207,6 +229,8 @@
         const totalYellowCount = reports.reduce((a,r)=>a+Object.values(r.statuses).filter(v=>v==="yellow").length,0);
         const totalRedCount = reports.reduce((a,r)=>a+Object.values(r.statuses).filter(v=>v==="red").length,0);
 
+        const categories = [...new Set(CHECKLIST_ITEMS.map(i => i.category))];
+
         const doorsHTML = reports.map(r => {
           const rows = CHECKLIST_ITEMS.map(item => {
             const s = r.statuses[item.id] || "none";
@@ -219,6 +243,28 @@
               <td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;font-size:11px;color:#475569;">${note}</td>
             </tr>`;
           }).join("");
+
+          // Build photo evidence section grouped by category (includes category-level photos)
+          const photosByCategory = categories.map(cat => {
+            const catPhotos = Object.entries(r.photos).filter(([key]) => key.startsWith(cat + "_"));
+            if (catPhotos.length === 0) return "";
+            const photoImgs = catPhotos.map(([key, photo]) => `
+              <div style="display:inline-block;margin:6px;text-align:center;vertical-align:top;">
+                <img src="${photo.dataUrl}" style="width:160px;height:120px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;display:block;" />
+                <div style="font-size:10px;color:#475569;margin-top:4px;max-width:160px;">${photo.fileName}</div>
+              </div>`).join("");
+            return `<div style="margin-bottom:12px;">
+              <div style="font-size:10px;font-weight:800;color:#64748b;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0;">${cat}</div>
+              <div>${photoImgs}</div>
+            </div>`;
+          }).join("");
+
+          const hasPhotos = Object.keys(r.photos).length > 0;
+          const photoSection = hasPhotos ? `
+            <div style="margin-top:14px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;page-break-inside:avoid;">
+              <div style="background:#334155;color:white;padding:8px 14px;font-size:12px;font-weight:700;letter-spacing:.06em;">PHOTO EVIDENCE — ${r.doorName}</div>
+              <div style="padding:12px 14px;">${photosByCategory}</div>
+            </div>` : "";
 
           const dProps = [
             r.doorType, r.material,
@@ -240,7 +286,7 @@
               <tbody>${rows}</tbody>
             </table>
             ${r.overallNotes ? `<div style="padding:6px 14px;background:#fffbeb;font-size:11px;color:#92400e;border-top:1px solid #fde68a;"><strong>Recommendations:</strong> ${r.overallNotes}</div>` : ""}
-          </div>`;
+          </div>${photoSection}`;
         }).join("");
 
         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Inspection Report</title>
